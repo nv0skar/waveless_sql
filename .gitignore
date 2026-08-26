@@ -12,5 +12,3 @@
 **/dist
 **/doc_build
 **/test
-
-**/Cargo.toml

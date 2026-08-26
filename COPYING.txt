@@ -1,4 +1,4 @@
-Waveless
+waveless_sql
 Copyright (C) 2026 Oscar Alvarez Gonzalez - All Rights Reserved.
 
 THE CONTENTS OF THIS PROJECT ARE PROPRIETARY AND CONFIDENTIAL.

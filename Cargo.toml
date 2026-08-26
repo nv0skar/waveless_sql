@@ -51,6 +51,8 @@ compact_str = { version = "0.10", features = ["serde"] }
 
 rand = "0.10"
 
+crc32fast = "1.5"
+
 regex = "1.13"
 
 tracing = "0.1"

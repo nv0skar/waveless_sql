@@ -37,7 +37,7 @@ impl AsRef<SQLQuery> for PostgresQuery {
     }
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Debug)]
 #[repr(transparent)]
 #[serde(transparent)]
 pub struct PostgresQueryWrapper(SQLQueryWrapper);

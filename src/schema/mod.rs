@@ -1,10 +1,9 @@
 // waveless_sql
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
+#[cfg(feature = "mysql")]
 pub mod mysql;
 
-use crate::*;
-
-use build::*;
+use waveless_commons::build::*;
 
 use sqlx::pool::*;

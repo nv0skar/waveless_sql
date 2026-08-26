@@ -4,7 +4,10 @@
 pub mod any_sql;
 pub mod query;
 
+#[cfg(feature = "mysql")]
 pub mod mysql;
+
+#[cfg(feature = "postgres")]
 pub mod postgres;
 
 pub use any_sql::*;

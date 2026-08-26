@@ -45,15 +45,12 @@ bytes = "1.12"
 sqlx = { version = "0.9.0", features = [
     "runtime-tokio",
     "tls-rustls",
-    "json",
-    "mysql",
-    "postgres"
+    "json"
 ] }
-sea-orm = { version = "2.0.2", features = [ "runtime-tokio-rustls", "schema-sync", "sqlx-mysql", "sqlx-postgres" ] }
+sea-orm = { version = "2.0.2", features = [ "runtime-tokio-rustls", "schema-sync" ] }
 sea-schema = { git = "https://github.com/nv0skar/sea-schema-mysql.git", features = [
     "runtime-tokio",
     "runtime-tokio-rustls",
-    "sqlx-all",
 ] }
 
 chrono = { version = "0.4.45", default-features = false, features = [
@@ -95,8 +92,6 @@ owo-colors = "4.3"
 
 regex = "1.13"
 
-# wasm-bindgen = "0.2.100"
-
 dotenvy = "0.15"
 dotenvy_macro = "0.15"
 
@@ -115,6 +110,12 @@ anyhow = "1.0"
 thiserror = "2.0.19"
 derive_builder = "0.20"
 derive_more = { version = "2.1", features = ["constructor", "display"] }
+
+[features]
+all = ["mysql", "postgres"]
+
+mysql = ["sqlx/mysql", "sea-orm/sqlx-mysql", "sea-schema/sqlx-mysql"]
+postgres = ["sqlx/postgres", "sea-orm/sqlx-postgres", "sea-schema/sqlx-postgres"]
 
 [workspace.lints.rust]
 unexpected_cfgs = "deny"

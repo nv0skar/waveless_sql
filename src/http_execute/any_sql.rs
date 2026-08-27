@@ -11,7 +11,7 @@ use sea_orm::{FromQueryResult, QueryResult};
 /// and the output will be a `serde_json::Value` that will be
 /// further serialized into JSON.
 pub async fn any_sql_execute(
-    queries: &CheapVec<impl AsRef<SQLQuery>>,
+    queries: &CheapVec<SQLQuery>,
     cx: RequestCx,
     db_conn: Arc<dyn AnyDatabaseConnection>,
 ) -> Result<HttpResponse, RequestError> {
@@ -21,7 +21,7 @@ pub async fn any_sql_execute(
         ..
     } = cx;
 
-    let mut queries = queries.iter().map(|query| query.as_ref());
+    let mut queries = queries.iter();
 
     let mut res_buffer = CheapVec::<serde_json::Value>::new();
 

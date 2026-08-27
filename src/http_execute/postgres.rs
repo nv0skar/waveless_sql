@@ -11,48 +11,14 @@ use super::*;
 )]
 #[display("SQL queries: {:?}", queries)]
 #[getset(get = "pub", get_mut = "pub")]
-#[serde(from = "PostgresQueryWrapper")]
+#[serde(from = "SQLQueryWrapper")]
 pub struct PostgresExecute {
     /// If no query is marked to be included in the response the response's body will be empty.
     /// NOTE: queries are executed sequentially.
-    queries: CheapVec<PostgresQuery>, // maybe explore better options to avoid cloning and achieve transparent deserialization.
+    queries: CheapVec<SQLQuery>, // maybe explore better options to avoid cloning and achieve transparent deserialization.
 }
 
 boxed_any!(PostgresExecute);
-
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Display, Debug)]
-#[repr(transparent)]
-#[serde(transparent)]
-pub struct PostgresQuery(SQLQuery);
-
-impl From<SQLQuery> for PostgresQuery {
-    fn from(value: SQLQuery) -> Self {
-        Self(value)
-    }
-}
-
-impl AsRef<SQLQuery> for PostgresQuery {
-    fn as_ref(&self) -> &SQLQuery {
-        &self.0
-    }
-}
-
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Debug)]
-#[repr(transparent)]
-#[serde(transparent)]
-pub struct PostgresQueryWrapper(SQLQueryWrapper);
-
-impl From<SQLQueryWrapper> for PostgresQueryWrapper {
-    fn from(value: SQLQueryWrapper) -> Self {
-        Self(value)
-    }
-}
-
-impl AsRef<SQLQueryWrapper> for PostgresQueryWrapper {
-    fn as_ref(&self) -> &SQLQueryWrapper {
-        &self.0
-    }
-}
 
 #[typetag::serde(name = "Postgres")]
 #[async_trait]
@@ -69,14 +35,14 @@ impl AnyHttpExecute for PostgresExecute {
     }
 }
 
-impl From<PostgresQueryWrapper> for PostgresExecute {
-    fn from(value: PostgresQueryWrapper) -> Self {
-        match value.as_ref() {
+impl From<SQLQueryWrapper> for PostgresExecute {
+    fn from(value: SQLQueryWrapper) -> Self {
+        match value {
             SQLQueryWrapper::Many { queries } => Self::new(
                 queries
                     .iter()
                     .map(|query| query.to_owned().into())
-                    .collect::<CheapVec<PostgresQuery>>(),
+                    .collect::<CheapVec<SQLQuery>>(),
             ),
             SQLQueryWrapper::Single { query: sql_query } => {
                 let queries = sql_query
@@ -92,7 +58,7 @@ impl From<PostgresQueryWrapper> for PostgresExecute {
                         )
                         .into()
                     })
-                    .collect::<CheapVec<PostgresQuery>>();
+                    .collect::<CheapVec<SQLQuery>>();
 
                 Self::new(queries)
             }

@@ -65,6 +65,8 @@ derive_builder = "0.20"
 derive_more = { version = "2.1", features = ["constructor", "display"] }
 
 [features]
+default = ["all"]
+
 all = ["mysql", "postgres"]
 
 mysql = ["sqlx/mysql", "sea-orm/sqlx-mysql", "sea-schema/sqlx-mysql"]

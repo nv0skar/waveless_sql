@@ -67,7 +67,7 @@ impl AnyDatabaseConnectionConfig for MySQLDBConnectionConfig {
             .max_connections(pool_max_size.unwrap_or(num_cpus * 2) as u32)
             .connect_with(conn_options)
             .await
-            .map_err(|err| anyhow!("Failed creating {}'s MySQL pool. {}", id, err))?;
+            .map_err(|err| eyre!("Failed creating {}'s MySQL pool. {}", id, err))?;
 
         let pool_wrapper =
             DatabaseConnection::from(DatabaseConnectionType::SqlxMySqlPoolConnection(

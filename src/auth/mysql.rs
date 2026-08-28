@@ -147,10 +147,10 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthenticationMethod {
 
         let name_field = entries
             .get(&self.name_field)
-            .ok_or(anyhow!("'{}' field not found.", self.name_field))?;
+            .ok_or(eyre!("'{}' field not found.", self.name_field))?;
         let password_field = entries
             .get(&self.password_field)
-            .ok_or(anyhow!("'{}' field not found.", self.password_field))?;
+            .ok_or(eyre!("'{}' field not found.", self.password_field))?;
 
         let res = db_conn
             .execute(DatabaseInput::QueryValues(
@@ -165,14 +165,14 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthenticationMethod {
                 ]),
             ))
             .await
-            .map_err(|err| anyhow!("Query execution error: {}", err))?;
+            .map_err(|err| eyre!("Query execution error: {}", err))?;
 
         let DatabaseOutput::Any(res) = res else {
             bail!("Unexpected database's executor's output.");
         };
 
         let res = res.downcast::<Vec<QueryResult>>().map_err(|err| {
-            RequestError::Other(anyhow!("Cannot downcast to MySQL query result. {:?}", err))
+            RequestError::Other(eyre!("Cannot downcast to MySQL query result. {:?}", err))
         })?;
 
         let Some(entry) = res.first() else {
@@ -209,10 +209,10 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthenticationMethod {
 
         let name_field = entries
             .get(&self.name_field)
-            .ok_or(anyhow!("'{}' field not found.", self.name_field))?;
+            .ok_or(eyre!("'{}' field not found.", self.name_field))?;
         let password_field = entries
             .get(&self.password_field)
-            .ok_or(anyhow!("'{}' field not found.", self.password_field))?;
+            .ok_or(eyre!("'{}' field not found.", self.password_field))?;
 
         let mut query_input = CheapVec::<_, 8>::from_vec(vec![
             sea_orm::Value::from(name_field.to_string()),
@@ -224,7 +224,7 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthenticationMethod {
                 entries
                     .get(extra_field)
                     .cloned()
-                    .ok_or(anyhow!("'{}' field not found.", extra_field))
+                    .ok_or(eyre!("'{}' field not found.", extra_field))
                     .map(|val| val.to_string())?,
             ));
         }
@@ -247,12 +247,12 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthenticationMethod {
                 query_input,
             ))
             .await
-            .map_err(|err| anyhow!("Query execution error: {}", err))
+            .map_err(|err| eyre!("Query execution error: {}", err))
         {
             Ok(val) => val,
             Err(err) => {
                 if err.to_compact_string().to_lowercase().contains("duplicate") {
-                    return Err(anyhow!(
+                    return Err(eyre!(
                         "Signup failed, an account with the same unique fields already exists."
                     ));
                 } else {
@@ -271,14 +271,14 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthenticationMethod {
                 CheapVec::from_vec(vec![sea_orm::Value::from(name_field.to_string())]),
             ))
             .await
-            .map_err(|err| anyhow!("Query execution error: {}", err))?;
+            .map_err(|err| eyre!("Query execution error: {}", err))?;
 
         let DatabaseOutput::Any(res) = res else {
             bail!("Unexpected database's executor's output.");
         };
 
         let res = res.downcast::<Vec<QueryResult>>().map_err(|err| {
-            RequestError::Other(anyhow!("Cannot downcast to MySQL query result. {:?}", err))
+            RequestError::Other(eyre!("Cannot downcast to MySQL query result. {:?}", err))
         })?;
 
         let Some(entry) = res.first() else {
@@ -347,14 +347,14 @@ impl AnySessionMethod for MySQLToken {
                 CheapVec::from_vec(vec![sea_orm::Value::from(token.to_string())]),
             ))
             .await
-            .map_err(|err| anyhow!("Query execution error: {}", err))?;
+            .map_err(|err| eyre!("Query execution error: {}", err))?;
 
         let DatabaseOutput::Any(res) = res else {
             bail!("Unexpected database's executor's output.");
         };
 
         let res = res.downcast::<Vec<QueryResult>>().map_err(|err| {
-            RequestError::Other(anyhow!("Cannot downcast to MySQL query result. {:?}", err))
+            RequestError::Other(eyre!("Cannot downcast to MySQL query result. {:?}", err))
         })?;
 
         let Some(entry) = res.first() else {
@@ -417,7 +417,7 @@ impl AnySessionMethod for MySQLToken {
                 ]),
             ))
             .await
-            .map_err(|err| anyhow!("Query execution error: {}", err))?;
+            .map_err(|err| eyre!("Query execution error: {}", err))?;
 
         Ok(token)
     }
@@ -456,7 +456,7 @@ impl AnySessionMethod for MySQLToken {
                         ]),
                     ))
                     .await
-                    .map_err(|err| anyhow!("Query execution error: {}", err))?;
+                    .map_err(|err| eyre!("Query execution error: {}", err))?;
             }
             None => {
                 // Invalidate all tokens from a given user.
@@ -470,7 +470,7 @@ impl AnySessionMethod for MySQLToken {
                         CheapVec::from_vec(vec![sea_orm::Value::from(user_id.to_string())]),
                     ))
                     .await
-                    .map_err(|err| anyhow!("Query execution error: {}", err))?;
+                    .map_err(|err| eyre!("Query execution error: {}", err))?;
             }
         };
 
@@ -520,14 +520,14 @@ impl AnyRoleMethod for MySQLRole {
                 CheapVec::from_vec(vec![sea_orm::Value::from(user_id as u32)]),
             ))
             .await
-            .map_err(|err| anyhow!("Query execution error: {}", err))?;
+            .map_err(|err| eyre!("Query execution error: {}", err))?;
 
         let DatabaseOutput::Any(res) = res else {
             bail!("Unexpected database's executor's output.");
         };
 
         let res = res.downcast::<Vec<QueryResult>>().map_err(|err| {
-            RequestError::Other(anyhow!("Cannot downcast to MySQL query result. {:?}", err))
+            RequestError::Other(eyre!("Cannot downcast to MySQL query result. {:?}", err))
         })?;
 
         let Some(entry) = res.first() else {

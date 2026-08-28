@@ -68,7 +68,7 @@ impl AnyDatabaseConnectionConfig for PostgresDBConnectionConfig {
             .max_connections(pool_max_size.unwrap_or(num_cpus * 2) as u32)
             .connect_with(conn_options)
             .await
-            .map_err(|err| anyhow!("Failed creating {}'s Postgres pool. {}", id, err))?;
+            .map_err(|err| eyre!("Failed creating {}'s Postgres pool. {}", id, err))?;
 
         let pool_wrapper =
             DatabaseConnection::from(DatabaseConnectionType::SqlxPostgresPoolConnection(

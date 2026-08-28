@@ -17,11 +17,11 @@ use rustyrosetta::*;
 
 use waveless_commons::{databases::*, endpoint::*, project::*, *};
 
-use anyhow::{Result, anyhow, bail};
 use async_trait::*;
 use chrono::{NaiveDateTime, Utc};
 use compact_str::*;
 use derive_more::{Constructor, Display};
+use eyre::{Result, bail, eyre};
 use getset::*;
 use http::StatusCode;
 use rand::distr::{Alphanumeric, SampleString};

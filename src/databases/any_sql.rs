@@ -29,7 +29,7 @@ impl<'a> AnySQLConnection<'a> {
 
                 Ok(DatabaseOutput::Any(Box::new(res)))
             }
-            _ => Err(anyhow!("Unsupported input for SQL query.")),
+            _ => Err(eyre!("Unsupported input for SQL query.")),
         }
     }
 }

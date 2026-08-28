@@ -137,13 +137,13 @@ pub async fn any_sql_execute(
             })?;
 
         let DatabaseOutput::Any(res) = res else {
-            return Err(RequestError::Other(anyhow!(
+            return Err(RequestError::Other(eyre!(
                 "Unexpected database's executor's output."
             )));
         };
 
         let res = res.downcast::<Vec<QueryResult>>().map_err(|err| {
-            RequestError::Other(anyhow!("Cannot downcast to SQL query result. {:?}", err))
+            RequestError::Other(eyre!("Cannot downcast to SQL query result. {:?}", err))
         })?;
 
         let mut rows = CheapVec::<_, 0>::new();

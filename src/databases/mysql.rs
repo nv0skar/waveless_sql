@@ -8,16 +8,17 @@ use super::*;
 use sea_orm::SqlxMySqlPoolConnection;
 use sqlx::mysql::*;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, BoxedAny, Debug)]
 pub struct MySQLConnection(DatabaseConnection);
 
-boxed_any!(MySQLConnection);
-#[async_trait]
-impl AnyDatabaseConnection for MySQLConnection {
+impl AnyExt for MySQLConnection {
     fn name(&self) -> &str {
         "mysql"
     }
+}
 
+#[async_trait]
+impl AnyDatabaseConnection for MySQLConnection {
     async fn execute(&self, input: DatabaseInput) -> Result<DatabaseOutput> {
         let sql_connection = AnySQLConnection::new(&self.0);
 
@@ -27,21 +28,21 @@ impl AnyDatabaseConnection for MySQLConnection {
 
 /// MySQL database
 // TODO - Support more authentication methods
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Display, Debug)]
+#[derive(
+    Clone, PartialEq, Constructor, Serialize, Deserialize, BoxedAny, Getters, Display, Debug,
+)]
 #[display("MySQL: {}@{} on {}", username, host, db)]
 #[getset(get = "pub")]
-pub struct MySQLDBConnectionConfig {
+pub struct MySQLDbConnsectionConfig {
     host: SocketAddr,
     username: CompactString,
     password: CompactString,
     db: CompactString,
 }
 
-boxed_any!(MySQLDBConnectionConfig);
-
 #[typetag::serde(name = "MySQL")]
 #[async_trait]
-impl AnyDatabaseConnectionConfig for MySQLDBConnectionConfig {
+impl AnyDatabaseConnectionConfig for MySQLDbConnsectionConfig {
     async fn new_conn(
         &self,
         id: CompactString,

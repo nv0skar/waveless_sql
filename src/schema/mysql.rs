@@ -10,15 +10,15 @@ use databases::mysql::*;
 use sqlx::mysql::*;
 
 /// The MySQL discovery strategy will analyze a MySQL database in order to generate a representation of the data model that will be analyzed by the endpoint generator backend.
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Display, Debug)]
+#[derive(
+    Clone, PartialEq, Constructor, Serialize, Deserialize, BoxedAny, Getters, Display, Debug,
+)]
 #[display("MySQL schema discovery (skipping: {:?})", skip_tables)]
 #[getset(get = "pub")]
 pub struct MySQLSchemaDiscoveryMethod {
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
     skip_tables: CheapVec<CompactString, 0>, // Do not forget that auth, session and role tables are also skipped
 }
-
-boxed_any!(MySQLSchemaDiscoveryMethod);
 
 #[typetag::serde(name = "MySQL")]
 #[async_trait]
@@ -31,11 +31,11 @@ impl AnyDataSchemaDiscoveryMethod for MySQLSchemaDiscoveryMethod {
         let Ok(db_conn_config) = db_conn_config
             .to_owned()
             .into_arc_any()
-            .downcast::<MySQLDBConnectionConfig>()
+            .downcast::<MySQLDbConnsectionConfig>()
         else {
             bail!(
                 "Database connection config should be of type {:?} but it's of type {:?}.",
-                TypeId::of::<MySQLDBConnectionConfig>(),
+                TypeId::of::<MySQLDbConnsectionConfig>(),
                 db_conn_config.inner_type_id()
             )
         };
@@ -47,7 +47,7 @@ impl AnyDataSchemaDiscoveryMethod for MySQLSchemaDiscoveryMethod {
         let Ok(mysql_raw_pool) = raw_conn.downcast::<Pool<MySql>>() else {
             bail!(
                 "Database connection raw pool should be of type {:?} but it's of type {:?}.",
-                TypeId::of::<MySQLDBConnectionConfig>(),
+                TypeId::of::<MySQLDbConnsectionConfig>(),
                 db_conn_config.inner_type_id()
             )
         };

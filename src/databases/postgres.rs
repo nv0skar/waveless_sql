@@ -8,17 +8,17 @@ use super::*;
 use sea_orm::SqlxPostgresPoolConnection;
 use sqlx::postgres::*;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, BoxedAny, Debug)]
 pub struct PostgresConnection(DatabaseConnection);
 
-boxed_any!(PostgresConnection);
-
-#[async_trait]
-impl AnyDatabaseConnection for PostgresConnection {
+impl AnyExt for PostgresConnection {
     fn name(&self) -> &str {
         "postgres"
     }
+}
 
+#[async_trait]
+impl AnyDatabaseConnection for PostgresConnection {
     async fn execute(&self, input: DatabaseInput) -> Result<DatabaseOutput> {
         let sql_connection = AnySQLConnection::new(&self.0);
 
@@ -28,21 +28,21 @@ impl AnyDatabaseConnection for PostgresConnection {
 
 /// Postgres database
 // TODO - Support more authentication methods
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Display, Debug)]
+#[derive(
+    Clone, PartialEq, Constructor, Serialize, Deserialize, BoxedAny, Getters, Display, Debug,
+)]
 #[display("Postgres: {}@{} on {}", username, host, db)]
 #[getset(get = "pub")]
-pub struct PostgresDBConnectionConfig {
+pub struct PostgresDbConnsectionConfig {
     host: SocketAddr,
     username: CompactString,
     password: CompactString,
     db: CompactString,
 }
 
-boxed_any!(PostgresDBConnectionConfig);
-
 #[typetag::serde(name = "Postgres")]
 #[async_trait]
-impl AnyDatabaseConnectionConfig for PostgresDBConnectionConfig {
+impl AnyDatabaseConnectionConfig for PostgresDbConnsectionConfig {
     async fn new_conn(
         &self,
         id: CompactString,

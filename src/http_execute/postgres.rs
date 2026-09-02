@@ -7,7 +7,16 @@ use super::*;
 
 /// TODO: add documentation.
 #[derive(
-    Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, MutGetters, Display, Debug,
+    Clone,
+    PartialEq,
+    Constructor,
+    Serialize,
+    Deserialize,
+    BoxedAny,
+    Getters,
+    MutGetters,
+    Display,
+    Debug,
 )]
 #[display("SQL queries: {:?}", queries)]
 #[getset(get = "pub", get_mut = "pub")]
@@ -18,7 +27,11 @@ pub struct PostgresExecute {
     queries: CheapVec<SQLQuery>, // maybe explore better options to avoid cloning and achieve transparent deserialization.
 }
 
-boxed_any!(PostgresExecute);
+impl AnyExt for PostgresExecute {
+    fn name(&self) -> &str {
+        "postgres"
+    }
+}
 
 #[typetag::serde(name = "Postgres")]
 #[async_trait]
@@ -29,9 +42,9 @@ impl AnyHttpExecute for PostgresExecute {
     async fn execute(
         &self,
         cx: RequestCx,
-        db_conn: Arc<dyn AnyDatabaseConnection>,
+        db_conns: DbConns,
     ) -> Result<HttpResponse, RequestError> {
-        any_sql_execute(&self.queries, cx, db_conn).await
+        any_sql_execute(&self.queries, cx, db_conns).await
     }
 }
 

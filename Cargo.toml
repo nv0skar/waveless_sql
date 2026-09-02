@@ -10,6 +10,8 @@ edition = "2024"
 rustyrosetta = { git = "https://github.com/nv0skar/RustyRosetta.git", tag = "rustyrosetta_0.0.4", features = [
     "all",
 ] }
+boxed_any = { git = "https://github.com/nv0skar/BoxedAny.git" }
+boxed_any_derive = { git = "https://github.com/nv0skar/BoxedAny.git" }
 
 waveless_commons = { git = "https://github.com/nv0skar/Waveless.git" }
 
@@ -41,11 +43,12 @@ typetag = "0.2"
 async-trait = "0.1"
 dyn-clone = "1.0.20"
 
-struct-patch = "0.13"
+struct-patch = "0.14"
 
 smallvec = { version = "1.15", features = ["serde", "write", "const_new"] }
 arrayvec = { version = "0.7", features = ["serde"] }
 smallbox = "0.8"
+dashmap = "6.2"
 rclite = "0.4"
 compact_str = { version = "0.10", features = ["serde"] }
 
@@ -61,6 +64,7 @@ itertools = "0.15"
 
 getset = "0.1"
 eyre = "0.6"
+color-eyre = "0.6"
 derive_builder = "0.20"
 derive_more = { version = "2.1", features = ["constructor", "display"] }
 

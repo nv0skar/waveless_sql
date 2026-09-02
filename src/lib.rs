@@ -13,12 +13,15 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use boxed_any::*;
+use boxed_any_derive::*;
 use rustyrosetta::*;
 
 use waveless_commons::{databases::*, endpoint::*, project::*, *};
 
 use async_trait::*;
 use chrono::{NaiveDateTime, Utc};
+use color_eyre::Section;
 use compact_str::*;
 use derive_more::{Constructor, Display};
 use eyre::{Result, bail, eyre};
@@ -35,3 +38,21 @@ use tracing::*;
 /// elimination (DCE) from stripping this crate's registered types.
 #[inline(always)]
 pub fn register() {}
+
+#[inline]
+pub(crate) fn assert_db_backends_length(
+    db_conns: DbConns,
+    origin: CompactString,
+) -> Result<(), RequestError> {
+    match db_conns.len() != 1 {
+        true => Err(RequestError::Other(
+            eyre!("`waveless_sql` does not support multiple or a missing database backends.")
+                .note(format!("Loaded database backends: {}", db_conns.len()))
+                .suggestion(format!(
+                    "Add exactly one database backend to this executor (`{}`).",
+                    origin,
+                )),
+        )),
+        false => Ok(()),
+    }
+}

@@ -13,13 +13,18 @@ use sea_orm::{FromQueryResult, QueryResult};
 pub async fn any_sql_execute(
     queries: &CheapVec<SQLQuery>,
     cx: RequestCx,
-    db_conn: Arc<dyn AnyDatabaseConnection>,
+    db_conns: DbConns,
 ) -> Result<HttpResponse, RequestError> {
     let RequestCx {
         method,
         request_params: params,
+        endpoint,
         ..
     } = cx;
+
+    assert_db_backends_length(db_conns.to_owned(), endpoint.id().to_owned())?;
+
+    let db_conn = db_conns.values().next().unwrap();
 
     let mut queries = queries.iter();
 

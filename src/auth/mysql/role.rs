@@ -65,7 +65,7 @@ impl AnyRoleMethod for MySQLRole {
                     self.role_field, self.table_name, self.user_id_field
                 )
                 .into(),
-                CheapVec::from_vec(vec![sea_orm::Value::from(user_id as u32)]),
+                CheapVec::from_vec(vec![user_id.to_string().into()]),
             ))
             .await
             .map_err(|err| eyre!("Query execution error: {}", err))?;

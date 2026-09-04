@@ -74,7 +74,7 @@ impl AnySessionMethod for MySQLToken {
                     self.user_id_field, self.created_field, self.table_name, self.token_field
                 )
                 .into(),
-                CheapVec::from_vec(vec![sea_orm::Value::from(token.to_string())]),
+                CheapVec::from_vec(vec![token.to_owned()]),
             ))
             .await
             .map_err(|err| eyre!("Query execution error: {}", err))?;
@@ -141,9 +141,9 @@ impl AnySessionMethod for MySQLToken {
             .execute(DatabaseInput::QueryValues(
                 format!("INSERT INTO {} VALUES (?, ?, ?)", self.table_name).into(),
                 CheapVec::from_vec(vec![
-                    sea_orm::Value::from(token.to_string()),
-                    sea_orm::Value::from(user_id.to_string()),
-                    sea_orm::Value::from(Utc::now().naive_utc()),
+                    token.to_owned(),
+                    user_id.to_string().into(),
+                    Utc::now().naive_utc().to_string().into(),
                 ]),
             ))
             .await
@@ -185,8 +185,8 @@ impl AnySessionMethod for MySQLToken {
                         )
                         .into(),
                         CheapVec::from_vec(vec![
-                            sea_orm::Value::from(token.to_string()),
-                            sea_orm::Value::from(user_id.to_string()),
+                            token.to_string().into(),
+                            user_id.to_string().into(),
                         ]),
                     ))
                     .await
@@ -201,7 +201,7 @@ impl AnySessionMethod for MySQLToken {
                             self.table_name, self.user_id_field
                         )
                         .into(),
-                        CheapVec::from_vec(vec![sea_orm::Value::from(user_id.to_string())]),
+                        CheapVec::from_vec(vec![user_id.to_string().into()]),
                     ))
                     .await
                     .map_err(|err| eyre!("Query execution error: {}", err))?;

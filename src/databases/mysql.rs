@@ -8,7 +8,8 @@ use super::*;
 use sea_orm::SqlxMySqlPoolConnection;
 use sqlx::mysql::*;
 
-#[derive(Clone, BoxedAny, Debug)]
+#[derive(Clone, BoxedAny, Getters, Debug)]
+#[getset(get = "pub")]
 pub struct MySQLConnection(DatabaseConnection);
 
 impl AnyExt for MySQLConnection {
@@ -50,7 +51,7 @@ impl AnyDatabaseConnectionConfig for MySQLDbConnsectionConfig {
         pool_max_size: Option<usize>,
     ) -> Result<(Arc<dyn AnyDatabaseConnection>, Box<dyn Any>)> {
         info!(
-            "Creating new MySQL database connection ({}) on {}",
+            "Creating new MySQL database connection ({}) on {}.",
             self.host, self.db
         );
 
@@ -68,7 +69,7 @@ impl AnyDatabaseConnectionConfig for MySQLDbConnsectionConfig {
             .max_connections(pool_max_size.unwrap_or(num_cpus * 2) as u32)
             .connect_with(conn_options)
             .await
-            .map_err(|err| eyre!("Failed creating {}'s MySQL pool. {}", id, err))?;
+            .wrap_err(format!("Failed creating {}'s MySQL pool.", id))?;
 
         let pool_wrapper =
             DatabaseConnection::from(DatabaseConnectionType::SqlxMySqlPoolConnection(

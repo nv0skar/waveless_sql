@@ -24,7 +24,7 @@ use chrono::{NaiveDateTime, Utc};
 use color_eyre::Section;
 use compact_str::*;
 use derive_more::{Constructor, Display};
-use eyre::{Result, bail, eyre};
+use eyre::{Context, ContextCompat, Result, bail, eyre};
 use getset::*;
 use http::StatusCode;
 use rand::distr::{Alphanumeric, SampleString};

@@ -96,10 +96,7 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthentication {
                     self.user_id_field, self.table_name, self.name_field, self.password_field
                 )
                 .into(),
-                CheapVec::from_vec(vec![
-                    sea_orm::Value::from(name_field.to_string()),
-                    sea_orm::Value::from(password_field.to_string()),
-                ]),
+                CheapVec::from_vec(vec![name_field.to_owned(), password_field.to_owned()]),
             ))
             .await
             .map_err(|err| eyre!("Query execution error: {}", err))?;
@@ -155,19 +152,16 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthentication {
             .get(&self.password_field)
             .ok_or(eyre!("'{}' field not found.", self.password_field))?;
 
-        let mut query_input = CheapVec::<_, 8>::from_vec(vec![
-            sea_orm::Value::from(name_field.to_string()),
-            sea_orm::Value::from(password_field.to_string()),
-        ]);
+        let mut query_input =
+            CheapVec::<_, 8>::from_vec(vec![name_field.to_owned(), password_field.to_owned()]);
 
         for extra_field in &self.extra_fields {
-            query_input.push(sea_orm::Value::from(
+            query_input.push(
                 entries
                     .get(extra_field)
                     .cloned()
-                    .ok_or(eyre!("'{}' field not found.", extra_field))
-                    .map(|val| val.to_string())?,
-            ));
+                    .ok_or(eyre!("'{}' field not found.", extra_field))?,
+            );
         }
 
         // Adding the keyword `RETURNING` doesn't allow deserializing the response.
@@ -209,7 +203,7 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthentication {
                     self.user_id_field, self.table_name, self.name_field
                 )
                 .into(),
-                CheapVec::from_vec(vec![sea_orm::Value::from(name_field.to_string())]),
+                CheapVec::from_vec(vec![name_field.to_owned()]),
             ))
             .await
             .map_err(|err| eyre!("Query execution error: {}", err))?;

@@ -4,6 +4,4 @@
 #[cfg(feature = "mysql")]
 pub mod mysql;
 
-use waveless_commons::object::*;
-
-use sqlx::pool::*;
+use waveless_commons::schema::*;

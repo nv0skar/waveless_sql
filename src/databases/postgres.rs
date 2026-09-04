@@ -50,7 +50,7 @@ impl AnyDatabaseConnectionConfig for PostgresDbConnsectionConfig {
         pool_max_size: Option<usize>,
     ) -> Result<(Arc<dyn AnyDatabaseConnection>, Box<dyn Any>)> {
         info!(
-            "Creating new Postgre database connection ({}) on {}",
+            "Creating new Postgre database connection ({}) on {}.",
             self.host, self.db
         );
 
@@ -68,7 +68,7 @@ impl AnyDatabaseConnectionConfig for PostgresDbConnsectionConfig {
             .max_connections(pool_max_size.unwrap_or(num_cpus * 2) as u32)
             .connect_with(conn_options)
             .await
-            .map_err(|err| eyre!("Failed creating {}'s Postgres pool. {}", id, err))?;
+            .wrap_err(format!("Failed creating {}'s Postgres pool.", id))?;
 
         let pool_wrapper =
             DatabaseConnection::from(DatabaseConnectionType::SqlxPostgresPoolConnection(

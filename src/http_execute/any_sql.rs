@@ -95,7 +95,7 @@ pub async fn any_sql_execute(
                 })
                 .flatten()
             {
-                Some(value) => ordered_values.push(sea_orm::Value::from(value.to_string())),
+                Some(value) => ordered_values.push(value),
                 None => {
                     if method == HttpMethod::Put {
                         // Modifies the query and strip `?`'s at the positions.

@@ -12,15 +12,21 @@ use sea_orm::{FromQueryResult, QueryResult};
 /// further serialized into JSON.
 pub async fn any_sql_execute(
     queries: &CheapVec<SQLQuery>,
-    cx: RequestCx,
+    cx: PipelineCx,
     db_conns: DbConns,
-) -> Result<HttpResponse, RequestError> {
+) -> PipelineResult {
+    let PipelineCx { request, response } = cx;
+
     let RequestCx {
         method,
         request_params: params,
         endpoint,
         ..
-    } = cx;
+    } = &request;
+
+    let mut response = response.unwrap_or_default();
+
+    *response.body_mut() = None; // Empty the response body set by previous execution steps.
 
     assert_db_backends_length(db_conns.to_owned(), endpoint.id().to_owned())?;
 
@@ -97,7 +103,7 @@ pub async fn any_sql_execute(
             {
                 Some(value) => ordered_values.push(value),
                 None => {
-                    if method == HttpMethod::Put {
+                    if *method == HttpMethod::Put {
                         // Modifies the query and strip `?`'s at the positions.
                         // As it is a PUT query we have to strip the column's name, '?' at the current position
 
@@ -187,14 +193,16 @@ pub async fn any_sql_execute(
     }
 
     match res_buffer.len() {
-        0 => Ok(HttpResponse::new(None, None)),
-        1 => Ok(HttpResponse::new(
-            None,
-            Some(BodyValue::Json(res_buffer.last().unwrap().to_owned())),
-        )),
-        _ => Ok(HttpResponse::new(
-            None,
-            Some(BodyValue::Json(json!(res_buffer))),
-        )),
-    }
+        0 => (),
+        1 => *response.body_mut() = Some(BodyValue::Json(res_buffer.last().unwrap().to_owned())),
+        _ => *response.body_mut() = Some(BodyValue::Json(json!(res_buffer))),
+    };
+
+    Ok((
+        PipelineCx {
+            request,
+            response: Some(response),
+        },
+        PipelineAction::Continue(None),
+    ))
 }

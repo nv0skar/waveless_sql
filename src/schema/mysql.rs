@@ -6,7 +6,7 @@ use crate::*;
 use super::*;
 
 use databases::mysql::*;
-use http_execute::{mysql::*, *};
+use http_executor::{mysql::*, *};
 
 /// The MySQL discovery strategy will analyze a MySQL database in order to generate a representation of the data model that will be analyzed by the endpoint generator backend.
 #[derive(
@@ -130,17 +130,20 @@ impl AnyEndpointGenerator for MySQLSchemaDiscovery {
                                             .method(*method)
                                             .version("v1".into())
                                             .route(route_one.to_owned())
-                                            .execute(Arc::<MySQLExecute>::new(
-                                                SQLQueryWrapper::new(
-                                                    format!(
-                                                        "SELECT * FROM {} WHERE {} = {}",
-                                                        table.info.name, pk_id, "{id}"
+                                            .execution_pipeline(
+                                                Arc::<MySQLExecute>::new(
+                                                    SQLQueryWrapper::new(
+                                                        format!(
+                                                            "SELECT * FROM {} WHERE {} = {}",
+                                                            table.info.name, pk_id, "{id}"
+                                                        )
+                                                        .into(),
                                                     )
+                                                    .with_behaviour(SQLBehaviour::Unique)
                                                     .into(),
                                                 )
-                                                .with_behaviour(SQLBehaviour::Unique)
                                                 .into(),
-                                            ))
+                                            )
                                             .query_params(CheapVec::new_const())
                                             .body_params(CheapVec::new_const())
                                             .capture_all_params(false)
@@ -168,12 +171,16 @@ impl AnyEndpointGenerator for MySQLSchemaDiscovery {
                                     .method(*method)
                                     .version("v1".into())
                                     .route(route_many.to_owned())
-                                    .execute(Arc::<MySQLExecute>::new(
-                                        SQLQueryWrapper::new(
-                                            format!("SELECT * FROM {}", table.info.name,).into(),
+                                    .execution_pipeline(
+                                        Arc::<MySQLExecute>::new(
+                                            SQLQueryWrapper::new(
+                                                format!("SELECT * FROM {}", table.info.name,)
+                                                    .into(),
+                                            )
+                                            .into(),
                                         )
                                         .into(),
-                                    ))
+                                    )
                                     .query_params(CheapVec::new_const())
                                     .body_params(CheapVec::new_const())
                                     .capture_all_params(false)
@@ -200,35 +207,38 @@ impl AnyEndpointGenerator for MySQLSchemaDiscovery {
                                     .method(*method)
                                     .version("v1".into())
                                     .route(route_many.to_owned())
-                                    .execute(Arc::<MySQLExecute>::new(
-                                        SQLQueryWrapper::new(
-                                            format!(
-                                                "INSERT INTO {} ({}) VALUES ({})",
-                                                table.info.name,
-                                                columns_names
-                                                    .iter()
-                                                    .fold(String::new(), |last, next| format!(
-                                                        "{}, {}",
-                                                        last, next
-                                                    ))
-                                                    .trim_matches(
-                                                        |c: char| c.is_whitespace() || c == ','
-                                                    ),
-                                                columns_names
-                                                    .iter()
-                                                    .fold(String::new(), |last, next| format!(
-                                                        "{}, {{ {} }}",
-                                                        last, next
-                                                    ))
-                                                    .trim_matches(
-                                                        |c: char| c.is_whitespace() || c == ','
-                                                    ),
+                                    .execution_pipeline(
+                                        Arc::<MySQLExecute>::new(
+                                            SQLQueryWrapper::new(
+                                                format!(
+                                                    "INSERT INTO {} ({}) VALUES ({})",
+                                                    table.info.name,
+                                                    columns_names
+                                                        .iter()
+                                                        .fold(String::new(), |last, next| format!(
+                                                            "{}, {}",
+                                                            last, next
+                                                        ))
+                                                        .trim_matches(
+                                                            |c: char| c.is_whitespace() || c == ','
+                                                        ),
+                                                    columns_names
+                                                        .iter()
+                                                        .fold(String::new(), |last, next| format!(
+                                                            "{}, {{ {} }}",
+                                                            last, next
+                                                        ))
+                                                        .trim_matches(
+                                                            |c: char| c.is_whitespace() || c == ','
+                                                        ),
+                                                )
+                                                .into(),
                                             )
+                                            .with_include(false)
                                             .into(),
                                         )
-                                        .with_include(false)
                                         .into(),
-                                    ))
+                                    )
                                     .query_params(CheapVec::new_const())
                                     .body_params(columns_names.to_owned())
                                     .capture_all_params(false)
@@ -255,32 +265,35 @@ impl AnyEndpointGenerator for MySQLSchemaDiscovery {
                                     .method(*method)
                                     .version("v1".into())
                                     .route(route_one.to_owned())
-                                    .execute(Arc::<MySQLExecute>::new(
-                                        SQLQueryWrapper::new(
-                                            format!(
-                                                "UPDATE {} SET {} WHERE {} = {} ",
-                                                table.info.name,
-                                                columns_names
-                                                    .iter()
-                                                    .map(|name| format!(
-                                                        "{} = {{ {} }}",
-                                                        name, name
-                                                    ))
-                                                    .fold(String::new(), |last, next| format!(
-                                                        "{}, {}",
-                                                        last, next
-                                                    ))
-                                                    .trim_matches(
-                                                        |c: char| c.is_whitespace() || c == ','
-                                                    ),
-                                                pk_id,
-                                                "{id}"
+                                    .execution_pipeline(
+                                        Arc::<MySQLExecute>::new(
+                                            SQLQueryWrapper::new(
+                                                format!(
+                                                    "UPDATE {} SET {} WHERE {} = {} ",
+                                                    table.info.name,
+                                                    columns_names
+                                                        .iter()
+                                                        .map(|name| format!(
+                                                            "{} = {{ {} }}",
+                                                            name, name
+                                                        ))
+                                                        .fold(String::new(), |last, next| format!(
+                                                            "{}, {}",
+                                                            last, next
+                                                        ))
+                                                        .trim_matches(
+                                                            |c: char| c.is_whitespace() || c == ','
+                                                        ),
+                                                    pk_id,
+                                                    "{id}"
+                                                )
+                                                .into(),
                                             )
+                                            .with_include(false)
                                             .into(),
                                         )
-                                        .with_include(false)
                                         .into(),
-                                    ))
+                                    )
                                     .query_params(CheapVec::new_const())
                                     .body_params(columns_names.to_owned())
                                     .capture_all_params(false)
@@ -313,17 +326,20 @@ impl AnyEndpointGenerator for MySQLSchemaDiscovery {
                                     .method(*method)
                                     .version("v1".into())
                                     .route(route_one.to_owned())
-                                    .execute(Arc::<MySQLExecute>::new(
-                                        SQLQueryWrapper::new(
-                                            format!(
-                                                "DELETE FROM {} WHERE {} = {} ",
-                                                table.info.name, pk_id, "{id}"
+                                    .execution_pipeline(
+                                        Arc::<MySQLExecute>::new(
+                                            SQLQueryWrapper::new(
+                                                format!(
+                                                    "DELETE FROM {} WHERE {} = {} ",
+                                                    table.info.name, pk_id, "{id}"
+                                                )
+                                                .into(),
                                             )
+                                            .with_include(false)
                                             .into(),
                                         )
-                                        .with_include(false)
                                         .into(),
-                                    ))
+                                    )
                                     .query_params(CheapVec::new_const())
                                     .body_params(CheapVec::new_const())
                                     .capture_all_params(false)

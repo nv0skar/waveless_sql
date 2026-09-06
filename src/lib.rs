@@ -3,7 +3,7 @@
 
 pub mod auth;
 pub mod databases;
-pub mod http_execute;
+pub mod http_executor;
 pub mod schema;
 
 use std::any::{Any, TypeId};

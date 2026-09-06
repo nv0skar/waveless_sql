@@ -13,4 +13,4 @@ pub mod postgres;
 pub use any_sql::*;
 pub use query::*;
 
-use waveless_commons::http_execute::{request_cx::*, *};
+use waveless_commons::http_executor::*;

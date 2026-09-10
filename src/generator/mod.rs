@@ -4,4 +4,4 @@
 #[cfg(feature = "mysql")]
 pub mod mysql;
 
-use waveless_commons::schema::*;
+use waveless_commons::endpoint::{generator::*, *};

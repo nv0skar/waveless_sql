@@ -3,8 +3,8 @@
 
 pub mod auth;
 pub mod databases;
+pub mod generator;
 pub mod http_executor;
-pub mod schema;
 
 use std::any::{Any, TypeId};
 use std::collections::HashMap;

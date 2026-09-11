@@ -21,13 +21,13 @@ use super::*;
 #[display("SQL queries: {:?}", queries)]
 #[getset(get = "pub", get_mut = "pub")]
 #[serde(from = "SQLQueryWrapper")]
-pub struct PostgresExecute {
+pub struct PostgresExecutor {
     /// If no query is marked to be included in the response the response's body will be empty.
     /// NOTE: queries are executed sequentially.
     queries: CheapVec<SQLQuery>, // maybe explore better options to avoid cloning and achieve transparent deserialization.
 }
 
-impl AnyExt for PostgresExecute {
+impl AnyExt for PostgresExecutor {
     fn name(&self) -> &str {
         "postgres"
     }
@@ -35,7 +35,7 @@ impl AnyExt for PostgresExecute {
 
 #[typetag::serde(name = "Postgres")]
 #[async_trait]
-impl AnyHttpExecutor for PostgresExecute {
+impl AnyHttpExecutor for PostgresExecutor {
     /// Beware that the params are expected to be `ExecuteParams::StringMap`
     /// and the output will be a `serde_json::Value` that will be
     /// further serialized into JSON.
@@ -44,7 +44,7 @@ impl AnyHttpExecutor for PostgresExecute {
     }
 }
 
-impl From<SQLQueryWrapper> for PostgresExecute {
+impl From<SQLQueryWrapper> for PostgresExecutor {
     fn from(value: SQLQueryWrapper) -> Self {
         match value {
             SQLQueryWrapper::Many { queries } => Self::new(

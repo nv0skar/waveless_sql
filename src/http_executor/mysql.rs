@@ -21,13 +21,13 @@ use super::*;
 #[display("SQL queries: {:?}", queries)]
 #[getset(get = "pub", get_mut = "pub")]
 #[serde(from = "SQLQueryWrapper")]
-pub struct MySQLExecute {
+pub struct MySQLExecutor {
     /// If no query is marked to be included in the response the response's body will be empty.
     /// NOTE: queries are executed sequentially.
     queries: CheapVec<SQLQuery>, // maybe explore better options to avoid cloning and achieve transparent deserialization.
 }
 
-impl AnyExt for MySQLExecute {
+impl AnyExt for MySQLExecutor {
     fn name(&self) -> &str {
         "mysql"
     }
@@ -35,7 +35,7 @@ impl AnyExt for MySQLExecute {
 
 #[typetag::serde(name = "MySQL")]
 #[async_trait]
-impl AnyHttpExecutor for MySQLExecute {
+impl AnyHttpExecutor for MySQLExecutor {
     /// Beware that the params are expected to be `ExecuteParams::StringMap`
     /// and the output will be a `serde_json::Value` that will be
     /// further serialized into JSON.
@@ -44,7 +44,7 @@ impl AnyHttpExecutor for MySQLExecute {
     }
 }
 
-impl From<SQLQueryWrapper> for MySQLExecute {
+impl From<SQLQueryWrapper> for MySQLExecutor {
     fn from(value: SQLQueryWrapper) -> Self {
         match value {
             SQLQueryWrapper::Many { queries } => Self::new(

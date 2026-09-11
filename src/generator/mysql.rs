@@ -131,7 +131,7 @@ impl AnyEndpointGenerator for MySQLSchemaDiscovery {
                                             .version("v1".into())
                                             .route(route_one.to_owned())
                                             .execution_pipeline(
-                                                Arc::<MySQLExecute>::new(
+                                                Arc::<MySQLExecutor>::new(
                                                     SQLQueryWrapper::new(
                                                         format!(
                                                             "SELECT * FROM {} WHERE {} = {}",
@@ -172,7 +172,7 @@ impl AnyEndpointGenerator for MySQLSchemaDiscovery {
                                     .version("v1".into())
                                     .route(route_many.to_owned())
                                     .execution_pipeline(
-                                        Arc::<MySQLExecute>::new(
+                                        Arc::<MySQLExecutor>::new(
                                             SQLQueryWrapper::new(
                                                 format!("SELECT * FROM {}", table.info.name,)
                                                     .into(),
@@ -208,7 +208,7 @@ impl AnyEndpointGenerator for MySQLSchemaDiscovery {
                                     .version("v1".into())
                                     .route(route_many.to_owned())
                                     .execution_pipeline(
-                                        Arc::<MySQLExecute>::new(
+                                        Arc::<MySQLExecutor>::new(
                                             SQLQueryWrapper::new(
                                                 format!(
                                                     "INSERT INTO {} ({}) VALUES ({})",
@@ -266,7 +266,7 @@ impl AnyEndpointGenerator for MySQLSchemaDiscovery {
                                     .version("v1".into())
                                     .route(route_one.to_owned())
                                     .execution_pipeline(
-                                        Arc::<MySQLExecute>::new(
+                                        Arc::<MySQLExecutor>::new(
                                             SQLQueryWrapper::new(
                                                 format!(
                                                     "UPDATE {} SET {} WHERE {} = {} ",
@@ -327,7 +327,7 @@ impl AnyEndpointGenerator for MySQLSchemaDiscovery {
                                     .version("v1".into())
                                     .route(route_one.to_owned())
                                     .execution_pipeline(
-                                        Arc::<MySQLExecute>::new(
+                                        Arc::<MySQLExecutor>::new(
                                             SQLQueryWrapper::new(
                                                 format!(
                                                     "DELETE FROM {} WHERE {} = {} ",

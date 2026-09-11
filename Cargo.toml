@@ -26,7 +26,7 @@ bytes = "1.12"
 sqlx = { version = "0.9.0", features = [
     "runtime-tokio",
     "tls-rustls",
-    "json"
+    "json",
 ] }
 sea-orm = { version = "2.0.2", features = [ "runtime-tokio-rustls", "schema-sync" ] }
 sea-schema = { git = "https://github.com/nv0skar/sea-schema-mysql.git", features = [

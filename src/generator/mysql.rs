@@ -55,7 +55,7 @@ impl AnyEndpointGenerator for MySQLSchemaDiscovery {
 
         let schema = sea_schema::mysql::discovery::SchemaDiscovery::new(
             (*conn_pool).to_owned(),
-            &self.database,
+            conn_pool.connect_options().get_database().unwrap(),
         )
         .discover()
         .await?;

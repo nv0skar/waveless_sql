@@ -62,7 +62,7 @@ impl AnySessionMethod for MySQLToken {
         else {
             bail!(
                 "Database connection for `MySQLToken` session method should be of type {:?} but it's of type {:?}.",
-                TypeId::of::<MySQLDbConnsectionConfig>(),
+                TypeId::of::<MySQLDbConnectionConfig>(),
                 db_conn.inner_type_id()
             )
         };
@@ -130,7 +130,7 @@ impl AnySessionMethod for MySQLToken {
         else {
             bail!(
                 "Database connection for `MySQLToken` session method should be of type {:?} but it's of type {:?}.",
-                TypeId::of::<MySQLDbConnsectionConfig>(),
+                TypeId::of::<MySQLDbConnectionConfig>(),
                 db_conn.inner_type_id()
             )
         };
@@ -169,7 +169,7 @@ impl AnySessionMethod for MySQLToken {
         else {
             bail!(
                 "Database connection for `MySQLToken` session method should be of type {:?} but it's of type {:?}.",
-                TypeId::of::<MySQLDbConnsectionConfig>(),
+                TypeId::of::<MySQLDbConnectionConfig>(),
                 db_conn.inner_type_id()
             )
         };

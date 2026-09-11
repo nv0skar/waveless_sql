@@ -34,7 +34,7 @@ impl AnyDatabaseConnection for MySQLConnection {
 )]
 #[display("MySQL: {}@{} on {}", username, host, db)]
 #[getset(get = "pub")]
-pub struct MySQLDbConnsectionConfig {
+pub struct MySQLDbConnectionConfig {
     host: SocketAddr,
     username: CompactString,
     password: CompactString,
@@ -43,7 +43,7 @@ pub struct MySQLDbConnsectionConfig {
 
 #[typetag::serde(name = "MySQL")]
 #[async_trait]
-impl AnyDatabaseConnectionConfig for MySQLDbConnsectionConfig {
+impl AnyDatabaseConnectionConfig for MySQLDbConnectionConfig {
     async fn new_conn(
         &self,
         id: CompactString,

@@ -53,7 +53,7 @@ impl AnyRoleMethod for MySQLRole {
         else {
             bail!(
                 "Database connection for `MySQLRole` role method should be of type {:?} but it's of type {:?}.",
-                TypeId::of::<MySQLDbConnsectionConfig>(),
+                TypeId::of::<MySQLDbConnectionConfig>(),
                 db_conn.inner_type_id()
             )
         };

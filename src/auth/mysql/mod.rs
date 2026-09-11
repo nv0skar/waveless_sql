@@ -77,7 +77,7 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthentication {
         else {
             bail!(
                 "Database connection for `MySQLSimple` authentication should be of type {:?} but it's of type {:?}.",
-                TypeId::of::<MySQLDbConnsectionConfig>(),
+                TypeId::of::<MySQLDbConnectionConfig>(),
                 db_conn.inner_type_id()
             )
         };
@@ -140,7 +140,7 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthentication {
         else {
             bail!(
                 "Database connection for `MySQLSimple` authentication should be of type {:?} but it's of type {:?}.",
-                TypeId::of::<MySQLDbConnsectionConfig>(),
+                TypeId::of::<MySQLDbConnectionConfig>(),
                 db_conn.inner_type_id()
             )
         };

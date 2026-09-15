@@ -14,6 +14,7 @@ pub async fn any_sql_execute(
     queries: &CheapVec<SQLQuery>,
     cx: PipelineCx,
     db_conns: DbConns,
+    db_id: Option<DatabaseId>,
 ) -> PipelineResult {
     let PipelineCx { request, response } = cx;
 
@@ -28,9 +29,18 @@ pub async fn any_sql_execute(
 
     *response.body_mut() = None; // Empty the response body set by previous execution steps.
 
-    assert_db_backends_length(db_conns.to_owned(), endpoint.id().to_owned())?;
+    let db_conn = match db_id {
+        Some(db_id) => db_conns
+            .iter()
+            .find(|(id, _)| id.to_owned() == db_id)
+            .map(|(_, db_conn)| db_conn)
+            .wrap_err(format!("Cannot find the given database id `{}`", db_id))?,
+        None => {
+            assert_db_backends_length(db_conns.to_owned(), endpoint.id().to_owned())?;
 
-    let db_conn = db_conns.values().next().unwrap();
+            db_conns.values().next().unwrap()
+        }
+    };
 
     let mut queries = queries.iter();
 
@@ -198,11 +208,5 @@ pub async fn any_sql_execute(
         _ => *response.body_mut() = Some(BodyValue::Json(json!(res_buffer))),
     };
 
-    Ok((
-        PipelineCx {
-            request,
-            response: Some(response),
-        },
-        PipelineAction::Continue(None),
-    ))
+    Ok(((request, response).into(), PipelineAction::Continue(None)))
 }

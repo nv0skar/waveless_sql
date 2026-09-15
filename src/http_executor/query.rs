@@ -50,10 +50,16 @@ impl Default for SQLBehaviour {
 #[serde(untagged)]
 pub enum SQLQueryWrapper {
     Single {
+        #[serde(default, skip_serializing_if = "should_skip_option")]
+        database: Option<DatabaseId>,
+
         #[serde(flatten)]
         query: SQLQuery,
     },
     Many {
+        #[serde(default, skip_serializing_if = "should_skip_option")]
+        database: Option<DatabaseId>,
+
         queries: CheapVec<SQLQuery>,
     },
 }
@@ -61,6 +67,7 @@ pub enum SQLQueryWrapper {
 impl SQLQueryWrapper {
     pub fn new(query: CompactString) -> Self {
         Self::Single {
+            database: None,
             query: SQLQuery {
                 query,
                 include: true,
@@ -69,36 +76,73 @@ impl SQLQueryWrapper {
         }
     }
 
+    pub fn with_database(self, database: DatabaseId) -> Self {
+        match self {
+            SQLQueryWrapper::Single { query, .. } => Self::Single {
+                database: Some(database),
+                query,
+            },
+            SQLQueryWrapper::Many { queries, .. } => Self::Many {
+                database: Some(database),
+                queries,
+            },
+        }
+    }
+
     pub fn with_include(self, include: bool) -> Self {
         match self {
-            SQLQueryWrapper::Single { mut query } => {
+            SQLQueryWrapper::Single {
+                database: db_id,
+                mut query,
+            } => {
                 query.include = include;
 
-                Self::Single { query }
+                Self::Single {
+                    database: db_id,
+                    query,
+                }
             }
-            SQLQueryWrapper::Many { mut queries } => {
+            SQLQueryWrapper::Many {
+                database: db_id,
+                mut queries,
+            } => {
                 queries.iter_mut().for_each(|query| {
                     query.include = include;
                 });
 
-                Self::Many { queries }
+                Self::Many {
+                    database: db_id,
+                    queries,
+                }
             }
         }
     }
 
     pub fn with_behaviour(self, behaviour: SQLBehaviour) -> Self {
         match self {
-            SQLQueryWrapper::Single { mut query } => {
+            SQLQueryWrapper::Single {
+                database: db_id,
+                mut query,
+            } => {
                 query.behaviour = behaviour;
 
-                Self::Single { query }
+                Self::Single {
+                    database: db_id,
+                    query,
+                }
             }
-            SQLQueryWrapper::Many { mut queries } => {
+            SQLQueryWrapper::Many {
+                database: db_id,
+                mut queries,
+            } => {
                 queries.iter_mut().for_each(|query| {
                     query.behaviour = behaviour;
                 });
 
-                Self::Many { queries }
+                Self::Many {
+                    database: db_id,
+                    queries,
+                }
             }
         }
     }

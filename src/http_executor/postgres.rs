@@ -22,6 +22,9 @@ use super::*;
 #[getset(get = "pub", get_mut = "pub")]
 #[serde(from = "SQLQueryWrapper")]
 pub struct PostgresExecutor {
+    #[serde(default, skip_serializing_if = "should_skip_option")]
+    database: Option<DatabaseId>,
+
     /// If no query is marked to be included in the response the response's body will be empty.
     /// NOTE: queries are executed sequentially.
     queries: CheapVec<SQLQuery>, // maybe explore better options to avoid cloning and achieve transparent deserialization.
@@ -40,20 +43,27 @@ impl AnyHttpExecutor for PostgresExecutor {
     /// and the output will be a `serde_json::Value` that will be
     /// further serialized into JSON.
     async fn execute(&self, cx: PipelineCx, db_conns: DbConns) -> PipelineResult {
-        any_sql_execute(&self.queries, cx, db_conns).await
+        any_sql_execute(&self.queries, cx, db_conns, self.database.to_owned()).await
     }
 }
 
 impl From<SQLQueryWrapper> for PostgresExecutor {
     fn from(value: SQLQueryWrapper) -> Self {
         match value {
-            SQLQueryWrapper::Many { queries } => Self::new(
+            SQLQueryWrapper::Many {
+                database: db_id,
+                queries,
+            } => Self::new(
+                db_id,
                 queries
                     .iter()
                     .map(|query| query.to_owned().into())
                     .collect::<CheapVec<SQLQuery>>(),
             ),
-            SQLQueryWrapper::Single { query: sql_query } => {
+            SQLQueryWrapper::Single {
+                database: db_id,
+                query: sql_query,
+            } => {
                 let queries = sql_query
                     .query()
                     .split(';')
@@ -69,7 +79,7 @@ impl From<SQLQueryWrapper> for PostgresExecutor {
                     })
                     .collect::<CheapVec<SQLQuery>>();
 
-                Self::new(queries)
+                Self::new(db_id, queries)
             }
         }
     }

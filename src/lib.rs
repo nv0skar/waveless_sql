@@ -46,10 +46,10 @@ pub(crate) fn assert_db_backends_length(
 ) -> Result<(), RequestError> {
     match db_conns.len() != 1 {
         true => Err(RequestError::Other(
-            eyre!("`waveless_sql` does not support multiple or a missing database backends.")
+            eyre!("`waveless_sql` does not support multiple (without id) or a missing database backends.")
                 .note(format!("Loaded database backends: {}", db_conns.len()))
                 .suggestion(format!(
-                    "Add exactly one database backend to this executor (`{}`).",
+                    "Add exactly one database backend or specify it's id (executor: `{}`).",
                     origin,
                 )),
         )),

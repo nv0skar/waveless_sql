@@ -19,6 +19,7 @@ use rustyrosetta::*;
 
 use waveless_commons::{databases::*, endpoint::*, project::*, *};
 
+use argon2::*;
 use async_trait::*;
 use chrono::{NaiveDateTime, Utc};
 use color_eyre::Section;

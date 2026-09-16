@@ -34,6 +34,8 @@ sea-schema = { git = "https://github.com/nv0skar/sea-schema-mysql.git", features
     "runtime-tokio-rustls",
 ] }
 
+argon2 = "0.6"
+
 chrono = { version = "0.4.45", default-features = false, features = [
     "clock",
     "serde",

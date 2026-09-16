@@ -82,21 +82,21 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthentication {
             )
         };
 
-        let name_field = entries
+        let name = entries
             .get(&self.name_field)
             .ok_or(eyre!("'{}' field not found.", self.name_field))?;
-        let password_field = entries
+        let plain_password = entries
             .get(&self.password_field)
             .ok_or(eyre!("'{}' field not found.", self.password_field))?;
 
         let res = db_conn
             .execute(DatabaseInput::QueryValues(
                 format!(
-                    "SELECT {} FROM {} WHERE {} = ? AND {} = ?",
-                    self.user_id_field, self.table_name, self.name_field, self.password_field
+                    "SELECT {}, {} FROM {} WHERE {} = ?",
+                    self.user_id_field, self.password_field, self.table_name, self.name_field
                 )
                 .into(),
-                CheapVec::from_vec(vec![name_field.to_owned(), password_field.to_owned()]),
+                CheapVec::from_vec(vec![name.to_owned()]),
             ))
             .await
             .map_err(|err| eyre!("Query execution error: {}", err))?;
@@ -109,16 +109,32 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthentication {
             RequestError::Other(eyre!("Cannot downcast to MySQL query result. {:?}", err))
         })?;
 
-        let Some(entry) = res.first() else {
+        let Some(entries) = res.first() else {
             return Ok(None);
         };
 
-        let Ok(user_id) = entry.try_get::<u32>("", &self.user_id_field) else {
+        let Ok(user_id) = entries.try_get::<u32>("", &self.user_id_field) else {
             bail!(
                 "Field '{}' expected but not returned in '{}' table. Maybe it exists but the associated data type is not `INT UNSIGNED`.",
                 self.user_id_field,
                 self.table_name
             )
+        };
+
+        let Ok(password_entry) = entries.try_get::<String>("", &self.password_field) else {
+            bail!(
+                "Field '{}' expected but not returned in '{}' table. Maybe it exists but the associated data type is not `TEXT` or `VARCHAR`.",
+                self.password_field,
+                self.table_name
+            )
+        };
+
+        let hasher = Argon2::new(Algorithm::default(), Version::default(), Params::default());
+
+        let hashed_password = PasswordHash::new(&password_entry)?;
+
+        let Ok(_) = hasher.verify_password(plain_password.as_bytes(), &hashed_password) else {
+            return Ok(None);
         };
 
         Ok(Some(user_id as usize))
@@ -145,15 +161,19 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthentication {
             )
         };
 
-        let name_field = entries
+        let name = entries
             .get(&self.name_field)
             .ok_or(eyre!("'{}' field not found.", self.name_field))?;
-        let password_field = entries
+        let plain_password = entries
             .get(&self.password_field)
             .ok_or(eyre!("'{}' field not found.", self.password_field))?;
 
+        let hasher = Argon2::new(Algorithm::default(), Version::default(), Params::default());
+
+        let hashed_password = hasher.hash_password(plain_password.as_bytes())?;
+
         let mut query_input =
-            CheapVec::<_, 8>::from_vec(vec![name_field.to_owned(), password_field.to_owned()]);
+            CheapVec::<_, 8>::from_vec(vec![name.to_owned(), hashed_password.to_string().into()]);
 
         for extra_field in &self.extra_fields {
             query_input.push(
@@ -203,7 +223,7 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthentication {
                     self.user_id_field, self.table_name, self.name_field
                 )
                 .into(),
-                CheapVec::from_vec(vec![name_field.to_owned()]),
+                CheapVec::from_vec(vec![name.to_owned()]),
             ))
             .await
             .map_err(|err| eyre!("Query execution error: {}", err))?;

@@ -27,8 +27,6 @@ pub async fn any_sql_execute(
 
     let mut response = response.unwrap_or_default();
 
-    *response.body_mut() = None; // Empty the response body set by previous execution steps.
-
     let db_conn = match db_id {
         Some(db_id) => db_conns
             .iter()

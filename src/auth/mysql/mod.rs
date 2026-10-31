@@ -35,11 +35,23 @@ pub struct MySQLSimpleAuthentication {
 
     password_field: CompactString,
 
+    /// This field overrides the PHC's algorithm field.
+    #[serde(default)]
+    password_hash: PasswordHashBackend,
+
     /// Specifies all other the fields the user table contains, useful for signing up new users.
     #[serde(default, skip_serializing_if = "CheapVec::is_empty")]
     extra_fields: CheapVec<CompactString>,
 
     totp_field: Option<CompactString>,
+}
+
+/// Available password hash backends.
+#[derive(Clone, PartialEq, Serialize, Deserialize, Display, Default, Debug)]
+pub enum PasswordHashBackend {
+    Plain,
+    #[default]
+    Argon2,
 }
 
 impl AnyExt for MySQLSimpleAuthentication {
@@ -129,15 +141,24 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthentication {
             )
         };
 
-        let hasher = Argon2::new(Algorithm::default(), Version::default(), Params::default());
+        let authenticated = match self.password_hash {
+            PasswordHashBackend::Plain => password_entry == plain_password,
+            PasswordHashBackend::Argon2 => {
+                let hasher =
+                    Argon2::new(Algorithm::default(), Version::default(), Params::default());
 
-        let hashed_password = PasswordHash::new(&password_entry)?;
+                let hashed_password = PasswordHash::new(&password_entry)?;
 
-        let Ok(_) = hasher.verify_password(plain_password.as_bytes(), &hashed_password) else {
-            return Ok(None);
+                hasher
+                    .verify_password(plain_password.as_bytes(), &hashed_password)
+                    .is_ok()
+            }
         };
 
-        Ok(Some(user_id as usize))
+        Ok(match authenticated {
+            true => Some(user_id as usize),
+            false => None,
+        })
     }
 
     async fn new(
@@ -164,16 +185,25 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthentication {
         let name = entries
             .get(&self.name_field)
             .ok_or(eyre!("'{}' field not found.", self.name_field))?;
-        let plain_password = entries
+        let mut password = entries
             .get(&self.password_field)
-            .ok_or(eyre!("'{}' field not found.", self.password_field))?;
+            .ok_or(eyre!("'{}' field not found.", self.password_field))?
+            .to_owned();
 
-        let hasher = Argon2::new(Algorithm::default(), Version::default(), Params::default());
+        match self.password_hash {
+            PasswordHashBackend::Argon2 => {
+                let hasher =
+                    Argon2::new(Algorithm::default(), Version::default(), Params::default());
 
-        let hashed_password = hasher.hash_password(plain_password.as_bytes())?;
+                password = hasher
+                    .hash_password(password.as_bytes())?
+                    .to_compact_string()
+            }
+            _ => (),
+        }
 
         let mut query_input =
-            CheapVec::<_, 8>::from_vec(vec![name.to_owned(), hashed_password.to_string().into()]);
+            CheapVec::<_, 8>::from_vec(vec![name.to_owned(), password.to_string().into()]);
 
         for extra_field in &self.extra_fields {
             query_input.push(
@@ -264,6 +294,7 @@ impl Default for MySQLSimpleAuthentication {
             user_id_field: "user_id".into(),
             name_field: "email".into(),
             password_field: "password".into(),
+            password_hash: Default::default(),
             extra_fields: CheapVec::new_const(),
             totp_field: None,
         }

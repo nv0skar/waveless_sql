@@ -125,9 +125,21 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthentication {
             return Ok(None);
         };
 
-        let Ok(user_id) = entries.try_get::<u32>("", &self.user_id_field) else {
+        let mut user_id = entries.try_get::<u32>("", &self.user_id_field);
+
+        // Just in case the primary key is not unsigned.
+        match user_id {
+            Err(_) => {
+                user_id = entries
+                    .try_get::<i32>("", &self.user_id_field)
+                    .map(|res: i32| res as u32)
+            }
+            _ => (),
+        }
+
+        let Ok(user_id) = user_id else {
             bail!(
-                "Field '{}' expected but not returned in '{}' table. Maybe it exists but the associated data type is not `INT UNSIGNED`.",
+                "Field '{}' expected but not returned in '{}' table.",
                 self.user_id_field,
                 self.table_name
             )

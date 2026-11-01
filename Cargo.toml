@@ -17,7 +17,7 @@ waveless_commons = { git = "https://github.com/nv0skar/Waveless.git" }
 
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_json = "1.0"
-serde_with = { version = "3.21", features = ["chrono"] }
+serde_with = { version = "3.24", features = ["chrono"] }
 
 http = "1.4.2"
 
@@ -28,7 +28,7 @@ sqlx = { version = "0.9.0", features = [
     "tls-rustls",
     "json",
 ] }
-sea-orm = { version = "2.0.3", features = [ "runtime-tokio-rustls", "schema-sync" ] }
+sea-orm = { version = "2.0.4", features = [ "runtime-tokio-rustls", "schema-sync" ] }
 sea-schema = { git = "https://github.com/nv0skar/sea-schema-mysql.git", features = [
     "runtime-tokio",
     "runtime-tokio-rustls",

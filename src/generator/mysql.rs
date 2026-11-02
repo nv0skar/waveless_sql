@@ -87,7 +87,7 @@ impl AnyEndpointGenerator for MySQLSchemaDiscovery {
 
             if pk_id.is_none() {
                 debug!(
-                    "Table {} doesn't have a primary key. Only GET many and POST endpoints will be generated.",
+                    "Table {} doesn't have a primary key. Only GET many endpoints will be generated.",
                     table.info.name.to_owned()
                 )
             }
@@ -196,7 +196,7 @@ impl AnyEndpointGenerator for MySQLSchemaDiscovery {
 
                         endpoints.add(endpoint_many.build()?)?;
                     }
-                    (HttpMethod::Post, _) if !is_view => {
+                    (HttpMethod::Post, Some(pk_id)) if !is_view => {
                         let mut endpoint = EndpointBuilder::default();
 
                         endpoint
@@ -211,7 +211,7 @@ impl AnyEndpointGenerator for MySQLSchemaDiscovery {
                                         Arc::<MySQLExecutor>::new(
                                             SQLQueryWrapper::new(
                                                 format!(
-                                                    "INSERT INTO {} ({}) VALUES ({})",
+                                                    "INSERT INTO {} ({}) VALUES ({}) RETURNING {}",
                                                     table.info.name,
                                                     columns_names
                                                         .iter()
@@ -231,10 +231,12 @@ impl AnyEndpointGenerator for MySQLSchemaDiscovery {
                                                         .trim_matches(
                                                             |c: char| c.is_whitespace() || c == ','
                                                         ),
+                                                    pk_id
                                                 )
                                                 .into(),
                                             )
-                                            .with_include(false)
+                                            .with_include(true)
+                                            .with_behaviour(SQLBehaviour::Unique)
                                             .into(),
                                         )
                                         .into(),

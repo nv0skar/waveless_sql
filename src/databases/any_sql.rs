@@ -24,7 +24,15 @@ impl<'a> AnySQLConnection<'a> {
                 let stmts = Statement::from_sql_and_values(
                     self.0.get_database_backend(),
                     query.to_string(),
-                    params.iter().map(|param| Value::from(param.to_string())),
+                    params.iter().map(|param| {
+                        let val = Value::from(param.to_string());
+
+                        if param.trim().to_lowercase() != "null" {
+                            val
+                        } else {
+                            val.as_null()
+                        }
+                    }),
                 );
 
                 let res = self.0.query_all_raw(stmts).await?;

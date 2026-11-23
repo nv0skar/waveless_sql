@@ -39,6 +39,10 @@ pub struct MySQLSimpleAuthentication {
     #[serde(default)]
     password_hash: PasswordHashBackend,
 
+    /// This field references to an optional field that reports whether a user is active.
+    #[serde(default)]
+    active_field: Option<CompactString>,
+
     /// Specifies all other the fields the user table contains, useful for signing up new users.
     #[serde(default, skip_serializing_if = "CheapVec::is_empty")]
     extra_fields: CheapVec<CompactString>,
@@ -268,7 +272,7 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthentication {
                 CheapVec::from_vec(vec![name.to_owned()]),
             ))
             .await
-            .map_err(|err| eyre!("Query execution error: {}", err))?;
+            .wrap_err("Query execution error.")?;
 
         let DatabaseOutput::Any(res) = res else {
             bail!("Unexpected database's executor's output.");
@@ -296,6 +300,60 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthentication {
     async fn delete(&self, _db_conns: DbConns, _user_id: UserId) -> Result<()> {
         todo!()
     }
+
+    async fn active(&self, db_conns: DbConns, user_id: UserId) -> Result<bool> {
+        let Some(active_field) = self.active_field.to_owned() else {
+            return Ok(true);
+        };
+
+        let db_conn = db_conns.values().next().unwrap();
+
+        let Ok(db_conn) = db_conn
+            .to_owned()
+            .into_arc_any()
+            .downcast::<MySQLConnection>()
+        else {
+            bail!(
+                "Database connection for `MySQLSimple` authentication should be of type {:?} but it's of type {:?}.",
+                TypeId::of::<MySQLDbConnectionConfig>(),
+                db_conn.inner_type_id()
+            )
+        };
+
+        let res = db_conn
+            .execute(DatabaseInput::QueryValues(
+                format!(
+                    "SELECT {} FROM {} WHERE {} = ?",
+                    active_field, self.table_name, self.user_id_field
+                )
+                .into(),
+                CheapVec::from_vec(vec![user_id.to_compact_string()]),
+            ))
+            .await
+            .wrap_err("Query execution error.")?;
+
+        let DatabaseOutput::Any(res) = res else {
+            bail!("Unexpected database's executor's output.");
+        };
+
+        let res = res.downcast::<Vec<QueryResult>>().map_err(|err| {
+            RequestError::Other(eyre!("Cannot downcast to MySQL query result. {:?}", err))
+        })?;
+
+        let Some(entry) = res.first() else {
+            bail!("Unexpected database's executor's output.");
+        };
+
+        let Ok(active) = entry.try_get::<bool>("", &active_field) else {
+            bail!(
+                "Field '{}' expected but not returned in '{}' table. Maybe it exists but the associated data type is not `BOOL`.",
+                active_field,
+                self.table_name
+            )
+        };
+
+        Ok(active)
+    }
 }
 
 impl Default for MySQLSimpleAuthentication {
@@ -307,6 +365,7 @@ impl Default for MySQLSimpleAuthentication {
             name_field: "email".into(),
             password_field: "password".into(),
             password_hash: Default::default(),
+            active_field: None,
             extra_fields: CheapVec::new_const(),
             totp_field: None,
         }

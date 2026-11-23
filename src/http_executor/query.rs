@@ -55,12 +55,18 @@ pub enum SQLQueryWrapper {
 
         #[serde(flatten)]
         query: SQLQuery,
+
+        #[serde(default, skip_serializing_if = "should_skip_option")]
+        owned_resource_field: Option<CompactString>,
     },
     Many {
         #[serde(default, skip_serializing_if = "should_skip_option")]
         database: Option<DatabaseId>,
 
         queries: CheapVec<SQLQuery>,
+
+        #[serde(default, skip_serializing_if = "should_skip_option")]
+        owned_resource_field: Option<CompactString>,
     },
 }
 
@@ -73,6 +79,7 @@ impl SQLQueryWrapper {
                 include: true,
                 behaviour: SQLBehaviour::Permissive,
             },
+            owned_resource_field: None,
         }
     }
 
@@ -81,10 +88,12 @@ impl SQLQueryWrapper {
             SQLQueryWrapper::Single { query, .. } => Self::Single {
                 database: Some(database),
                 query,
+                owned_resource_field: None,
             },
             SQLQueryWrapper::Many { queries, .. } => Self::Many {
                 database: Some(database),
                 queries,
+                owned_resource_field: None,
             },
         }
     }
@@ -94,17 +103,20 @@ impl SQLQueryWrapper {
             SQLQueryWrapper::Single {
                 database: db_id,
                 mut query,
+                owned_resource_field,
             } => {
                 query.include = include;
 
                 Self::Single {
                     database: db_id,
                     query,
+                    owned_resource_field,
                 }
             }
             SQLQueryWrapper::Many {
                 database: db_id,
                 mut queries,
+                owned_resource_field,
             } => {
                 queries.iter_mut().for_each(|query| {
                     query.include = include;
@@ -113,6 +125,7 @@ impl SQLQueryWrapper {
                 Self::Many {
                     database: db_id,
                     queries,
+                    owned_resource_field,
                 }
             }
         }
@@ -123,17 +136,20 @@ impl SQLQueryWrapper {
             SQLQueryWrapper::Single {
                 database: db_id,
                 mut query,
+                owned_resource_field,
             } => {
                 query.behaviour = behaviour;
 
                 Self::Single {
                     database: db_id,
                     query,
+                    owned_resource_field,
                 }
             }
             SQLQueryWrapper::Many {
                 database: db_id,
                 mut queries,
+                owned_resource_field,
             } => {
                 queries.iter_mut().for_each(|query| {
                     query.behaviour = behaviour;
@@ -142,6 +158,7 @@ impl SQLQueryWrapper {
                 Self::Many {
                     database: db_id,
                     queries,
+                    owned_resource_field,
                 }
             }
         }

@@ -21,6 +21,8 @@ pub struct MySQLToken {
     /// Must not be primary key.
     user_id_field: CompactString,
 
+    auth_backend_field: Option<CompactString>,
+
     created_field: CompactString,
 
     /// Max age of sessions.
@@ -50,7 +52,11 @@ impl AnySessionMethod for MySQLToken {
         Some(self.max_age)
     }
 
-    async fn check(&self, db_conns: DbConns, token: CompactString) -> Result<Option<UserId>> {
+    async fn check(
+        &self,
+        db_conns: DbConns,
+        token: CompactString,
+    ) -> Result<Option<(UserId, Option<AuthenticationBackendId>)>> {
         assert_db_backends_length(db_conns.to_owned(), self.name().into())?;
 
         let db_conn = db_conns.values().next().unwrap();
@@ -69,11 +75,22 @@ impl AnySessionMethod for MySQLToken {
 
         let res = db_conn
             .execute(DatabaseInput::QueryValues(
-                format!(
-                    "SELECT {}, {} FROM {} WHERE {} = ?",
-                    self.user_id_field, self.created_field, self.table_name, self.token_field
-                )
-                .into(),
+                match self.auth_backend_field.to_owned() {
+                    Some(auth_backend_field) => format!(
+                        "SELECT {}, {}, {} FROM {} WHERE {} = ?",
+                        self.user_id_field,
+                        self.created_field,
+                        auth_backend_field,
+                        self.table_name,
+                        self.token_field
+                    )
+                    .into(),
+                    None => format!(
+                        "SELECT {}, {} FROM {} WHERE {} = ?",
+                        self.user_id_field, self.created_field, self.table_name, self.token_field
+                    )
+                    .into(),
+                },
                 CheapVec::from_vec(vec![token.to_owned()]),
             ))
             .await
@@ -115,10 +132,25 @@ impl AnySessionMethod for MySQLToken {
             return Ok(None);
         }
 
-        Ok(Some(user_id as usize))
+        Ok(Some((
+            user_id as usize,
+            self.auth_backend_field
+                .to_owned()
+                .map(|auth_backend_field| {
+                    entry
+                        .try_get::<String>("", &auth_backend_field)
+                        .unwrap()
+                        .to_compact_string()
+                }),
+        )))
     }
 
-    async fn new(&self, db_conns: DbConns, user_id: UserId) -> Result<CompactString> {
+    async fn new(
+        &self,
+        db_conns: DbConns,
+        user_id: UserId,
+        auth_backend: Option<AuthenticationBackendId>,
+    ) -> Result<CompactString> {
         assert_db_backends_length(db_conns.to_owned(), self.name().into())?;
 
         let db_conn = db_conns.values().next().unwrap();
@@ -137,17 +169,41 @@ impl AnySessionMethod for MySQLToken {
 
         let token: CompactString = Alphanumeric.sample_string(&mut rand::rng(), 32).into();
 
-        let _ = db_conn
-            .execute(DatabaseInput::QueryValues(
-                format!("INSERT INTO {} VALUES (?, ?, ?)", self.table_name).into(),
+        let _ = match (auth_backend, self.auth_backend_field.to_owned()) {
+            (Some(auth_backend), Some(auth_backend_field)) => {
+                db_conn.execute(DatabaseInput::QueryValues(
+                    format!(
+                        "INSERT INTO {} ({}, {}, {}, {}) VALUES (?, ?, ?, ?)",
+                        self.table_name,
+                        self.token_field,
+                        self.user_id_field,
+                        self.created_field,
+                        auth_backend_field
+                    )
+                    .into(),
+                    CheapVec::from_vec(vec![
+                        token.to_owned(),
+                        user_id.to_string().into(),
+                        Utc::now().naive_utc().to_string().into(),
+                        auth_backend,
+                    ]),
+                ))
+            }
+            _ => db_conn.execute(DatabaseInput::QueryValues(
+                format!(
+                    "INSERT INTO {} ({}, {}, {}) VALUES (?, ?, ?)",
+                    self.table_name, self.token_field, self.user_id_field, self.created_field
+                )
+                .into(),
                 CheapVec::from_vec(vec![
                     token.to_owned(),
                     user_id.to_string().into(),
                     Utc::now().naive_utc().to_string().into(),
                 ]),
-            ))
-            .await
-            .map_err(|err| eyre!("Query execution error: {}", err))?;
+            )),
+        }
+        .await
+        .map_err(|err| eyre!("Query execution error: {}", err))?;
 
         Ok(token)
     }
@@ -223,6 +279,7 @@ impl Default for MySQLToken {
             table_name: "sessions_auth".into(),
             token_field: "session_id".into(),
             user_id_field: "user_id".into(),
+            auth_backend_field: Some("auth_backend".into()),
             created_field: "created_at".into(),
             max_age: 86400,
         }

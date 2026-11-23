@@ -5,7 +5,7 @@ use crate::*;
 
 use super::*;
 
-use sea_orm::{FromQueryResult, QueryResult};
+use sea_orm::{DbErr, FromQueryResult, QueryResult, RuntimeErr};
 
 /// Beware that the params are expected to be `ExecuteParams::StringMap`
 /// and the output will be a `serde_json::Value` that will be
@@ -15,15 +15,19 @@ pub async fn any_sql_execute(
     cx: PipelineCx,
     db_conns: DbConns,
     db_id: Option<DatabaseId>,
+    owned_resource_field: Option<CompactString>,
 ) -> PipelineResult {
-    let PipelineCx { request, response } = cx;
+    let PipelineCx {
+        mut request,
+        response,
+    } = cx;
 
     let RequestCx {
         method,
         request_params: params,
         endpoint,
         ..
-    } = &request;
+    } = &mut request;
 
     let mut response = response.unwrap_or_default();
 
@@ -40,9 +44,63 @@ pub async fn any_sql_execute(
         }
     };
 
-    let mut queries = queries.iter();
+    let mut queries = queries.to_owned();
 
     let mut res_buffer = CheapVec::<serde_json::Value>::new();
+
+    // Check whether `owned_resource` is set and `user_id` is injected.
+    match (owned_resource_field, params.get("user_id")) {
+        (Some(owned_resource_field), Some(ParamValue::Internal(user_id))) => {
+            // Check whether there is one query.
+            if queries.len() == 1 {
+                let Some(sql_query) = queries.iter_mut().next() else {
+                    unreachable!()
+                };
+
+                let query = sql_query.query_mut();
+
+                let target_query = query.trim().to_lowercase();
+
+                match query {
+                    _ if target_query.starts_with("select") => {
+                        *query = format!(
+                            "SELECT * FROM ({}) AS src WHERE src.{} = {}",
+                            query, owned_resource_field, user_id
+                        )
+                        .into();
+                    }
+                    _ if target_query.starts_with("insert") => {
+                        // Inject `user_id` as an internal parameter under the key defined by `owned_resource_field`.
+                        params.insert(
+                            owned_resource_field,
+                            ParamValue::Internal(user_id.to_owned()),
+                        );
+                    }
+                    _ if target_query.starts_with("update")
+                        || target_query.starts_with("delete") =>
+                    {
+                        *query = query.trim_suffix(')').into();
+
+                        *query =
+                            format!("{} AND {} = {}", query, owned_resource_field, user_id).into();
+                    }
+                    _ => {
+                        warn!("Owned resource wasn't applied as the query couldn't be recognized.")
+                    }
+                }
+            } else {
+                warn!(
+                    "Owned resource is set for this executor but there is more than one query set for this endpoint, it won't be transformed."
+                )
+            }
+        }
+        (Some(_), _) => Err(eyre!(
+            "Owned resource is set for this executor and `Auth::Required` is not set for this endpoint."
+        ))?,
+        _ => (),
+    };
+
+    let mut queries = queries.iter();
 
     while let Some(sql_query) = queries.next() {
         // Replaces Waveless' client's query's parameters placeholders with SQL's ones.
@@ -79,7 +137,7 @@ pub async fn any_sql_execute(
                     if let Some(ParamValue::Internal(value)) = params.get(sub.trim()) {
                         Ok(value.to_compact_string())
                     } else {
-                        Err(RequestError::Expected(
+                        Err(RequestError::new(
                             StatusCode::INTERNAL_SERVER_ERROR,
                             format!(
                                 "Expected the runtime parameter `{}`, but it was not injected.",
@@ -120,7 +178,7 @@ pub async fn any_sql_execute(
                                 .as_str(),
                         )
                         .map_err(|err| {
-                            RequestError::Expected(
+                            RequestError::new(
                                 StatusCode::INTERNAL_SERVER_ERROR,
                                 format!(
                                     "Cannot create the regex to extract '{}' from the query: {}",
@@ -132,7 +190,7 @@ pub async fn any_sql_execute(
 
                         query = re.replace_all(&query, "").into();
                     } else {
-                        return Err(RequestError::Expected(
+                        return Err(RequestError::new(
                                             StatusCode::INTERNAL_SERVER_ERROR,
                                                 format!(
                                                     "The endpoint requires '{}', but it wasn't provided in the request.",
@@ -149,10 +207,28 @@ pub async fn any_sql_execute(
             .execute(DatabaseInput::QueryValues(query, ordered_values))
             .await
             .map_err(|err| {
-                RequestError::Expected(
+                let mut req_error = RequestError::new(
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Query execution error: {}", err).into(),
-                )
+                    "Query execution error.".into(),
+                );
+
+                if let Ok(DbErr::Query(RuntimeErr::SqlxError(err))) = err.downcast::<DbErr>() {
+                    match *err {
+                        sqlx::Error::Database(ref database_error) => {
+                            req_error = req_error.with_metadata(MetadataKind::Json(json!({
+                                "code": database_error.code(),
+                                "message": database_error.message()
+                            })));
+                        }
+                        _ => {
+                            req_error = req_error.with_metadata(MetadataKind::Json(json!({
+                                "kind": err.to_string()
+                            })))
+                        }
+                    }
+                }
+
+                req_error
             })?;
 
         let DatabaseOutput::Any(res) = res else {
@@ -170,7 +246,7 @@ pub async fn any_sql_execute(
         for row in *res {
             rows.push(
                 sea_orm::JsonValue::from_query_result(&row, "").map_err(|err| {
-                    RequestError::Expected(
+                    RequestError::new(
                         StatusCode::INTERNAL_SERVER_ERROR,
                         format!("Internal error: cannot serialize row into JSON. {}", err).into(),
                     )
@@ -179,16 +255,23 @@ pub async fn any_sql_execute(
         }
 
         match sql_query.behaviour() {
-                    SQLBehaviour::FailOnEmpty if rows.is_empty() => {
-                        Err(RequestError::Expected(
+                    SQLBehaviour::FailOnEmpty if rows.is_empty() =>
+                        Err(RequestError::new(
                             StatusCode::BAD_REQUEST,
                             format!("Query result cannot be empty. HINT: error triggered because `FailOnEmpty` is enabled for this `SQL` execution context, maybe you want to set it to `Permissive`?",).into(),
-                        ))?
-                    }
-                    SQLBehaviour::Unique if rows.len() != 1 => Err(RequestError::Expected(
-                        StatusCode::BAD_REQUEST,
-                        format!("Resource does not exist. HINT: error triggered because `Unique` is enabled for this `SQL` execution context, maybe you want to set it to `Permissive`?",).into(),
-                    ))?,
+                        ))?,
+                    SQLBehaviour::Unique if rows.is_empty() => Err(RequestError::new(
+                        StatusCode::NOT_FOUND,
+                        format!("Resource not found.",).into(),
+                    ).with_metadata(MetadataKind::Json(json!({
+                        "hint": "Error triggered because `Unique` is enabled for this `SQL` execution context, maybe you want to set it to `Permissive`?"
+                    }))))?,
+                    SQLBehaviour::Unique if rows.len() > 1 => Err(RequestError::new(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("Resource was expected to be unique but returned more than one row.",).into(),
+                    ).with_metadata(MetadataKind::Json(json!({
+                        "hint": "Error triggered because `Unique` is enabled for this `SQL` execution context, maybe you want to set it to `Permissive`?"
+                    }))))?,
                     _ => (),
                 }
 

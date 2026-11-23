@@ -28,6 +28,8 @@ pub struct PostgresExecutor {
     /// If no query is marked to be included in the response the response's body will be empty.
     /// NOTE: queries are executed sequentially.
     queries: CheapVec<SQLQuery>, // maybe explore better options to avoid cloning and achieve transparent deserialization.
+
+    owned_resource_field: Option<CompactString>,
 }
 
 impl AnyExt for PostgresExecutor {
@@ -43,7 +45,14 @@ impl AnyHttpExecutor for PostgresExecutor {
     /// and the output will be a `serde_json::Value` that will be
     /// further serialized into JSON.
     async fn execute(&self, cx: PipelineCx, db_conns: DbConns) -> PipelineResult {
-        any_sql_execute(&self.queries, cx, db_conns, self.database.to_owned()).await
+        any_sql_execute(
+            &self.queries,
+            cx,
+            db_conns,
+            self.database.to_owned(),
+            self.owned_resource_field.to_owned(),
+        )
+        .await
     }
 }
 
@@ -53,16 +62,19 @@ impl From<SQLQueryWrapper> for PostgresExecutor {
             SQLQueryWrapper::Many {
                 database: db_id,
                 queries,
+                owned_resource_field,
             } => Self::new(
                 db_id,
                 queries
                     .iter()
                     .map(|query| query.to_owned().into())
                     .collect::<CheapVec<SQLQuery>>(),
+                owned_resource_field,
             ),
             SQLQueryWrapper::Single {
                 database: db_id,
                 query: sql_query,
+                owned_resource_field,
             } => {
                 let queries = sql_query
                     .query()
@@ -79,7 +91,7 @@ impl From<SQLQueryWrapper> for PostgresExecutor {
                     })
                     .collect::<CheapVec<SQLQuery>>();
 
-                Self::new(db_id, queries)
+                Self::new(db_id, queries, owned_resource_field)
             }
         }
     }

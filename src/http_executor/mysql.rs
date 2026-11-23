@@ -28,6 +28,14 @@ pub struct MySQLExecutor {
     /// If no query is marked to be included in the response the response's body will be empty.
     /// NOTE: queries are executed sequentially.
     queries: CheapVec<SQLQuery>, // maybe explore better options to avoid cloning and achieve transparent deserialization.
+
+    /// Specifies whether the executor should enforce resource ownership.
+    /// When ownership is enabled, only users logged in as the specified field will
+    /// be able to modify the resource, also when inserting data the specified field
+    /// will be automatically set and overriden.
+    /// NOTE: this requires `Auth::Required` to be set for the endpoint.
+    /// NOTE: multiple queries are not supported and won't be transformed.
+    owned_resource_field: Option<CompactString>,
 }
 
 impl AnyExt for MySQLExecutor {
@@ -43,23 +51,36 @@ impl AnyHttpExecutor for MySQLExecutor {
     /// and the output will be a `serde_json::Value` that will be
     /// further serialized into JSON.
     async fn execute(&self, cx: PipelineCx, db_conns: DbConns) -> PipelineResult {
-        any_sql_execute(&self.queries, cx, db_conns, self.database.to_owned()).await
+        any_sql_execute(
+            &self.queries,
+            cx,
+            db_conns,
+            self.database.to_owned(),
+            self.owned_resource_field.to_owned(),
+        )
+        .await
     }
 }
 
 impl From<SQLQueryWrapper> for MySQLExecutor {
     fn from(value: SQLQueryWrapper) -> Self {
         match value {
-            SQLQueryWrapper::Many { database, queries } => Self::new(
+            SQLQueryWrapper::Many {
+                database,
+                queries,
+                owned_resource_field,
+            } => Self::new(
                 database,
                 queries
                     .iter()
                     .map(|query| query.to_owned().into())
                     .collect::<CheapVec<SQLQuery>>(),
+                owned_resource_field,
             ),
             SQLQueryWrapper::Single {
                 database,
                 query: sql_query,
+                owned_resource_field,
             } => {
                 let queries = sql_query
                     .query()
@@ -76,7 +97,7 @@ impl From<SQLQueryWrapper> for MySQLExecutor {
                     })
                     .collect::<CheapVec<SQLQuery>>();
 
-                Self::new(database, queries)
+                Self::new(database, queries, owned_resource_field)
             }
         }
     }

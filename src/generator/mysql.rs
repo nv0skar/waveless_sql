@@ -154,6 +154,10 @@ impl AnyEndpointGenerator for MySQLSchemaDiscovery {
                                         table.info.name.to_compact_string(),
                                         "get_one".into(),
                                     ]))
+                                    .metadata(MetadataKind::Map(HashMap::from_iter([(
+                                        "table".into(),
+                                        table.info.name.to_owned().into(),
+                                    )])))
                                     .deprecated(false);
 
                                 endpoints.add(endpoint_one.build()?)?;
@@ -192,6 +196,10 @@ impl AnyEndpointGenerator for MySQLSchemaDiscovery {
                                 table.info.name.to_compact_string(),
                                 "get_all".into(),
                             ]))
+                            .metadata(MetadataKind::Map(HashMap::from_iter([(
+                                "table".into(),
+                                table.info.name.to_owned().into(),
+                            )])))
                             .deprecated(false);
 
                         endpoints.add(endpoint_many.build()?)?;
@@ -252,6 +260,10 @@ impl AnyEndpointGenerator for MySQLSchemaDiscovery {
                                 table.info.name.to_compact_string(),
                                 "post".into(),
                             ]))
+                            .metadata(MetadataKind::Map(HashMap::from_iter([(
+                                "table".into(),
+                                table.info.name.to_owned().into(),
+                            )])))
                             .deprecated(false);
 
                         endpoints.add(endpoint.build()?)?;
@@ -313,6 +325,10 @@ impl AnyEndpointGenerator for MySQLSchemaDiscovery {
                                 table.info.name.to_compact_string(),
                                 "put".into(),
                             ]))
+                            .metadata(MetadataKind::Map(HashMap::from_iter([(
+                                "table".into(),
+                                table.info.name.to_owned().into(),
+                            )])))
                             .deprecated(false);
 
                         endpoints.add(endpoint.build()?)?;
@@ -359,6 +375,10 @@ impl AnyEndpointGenerator for MySQLSchemaDiscovery {
                                 table.info.name.to_compact_string(),
                                 "delete".into(),
                             ]))
+                            .metadata(MetadataKind::Map(HashMap::from_iter([(
+                                "table".into(),
+                                table.info.name.to_owned().into(),
+                            )])))
                             .deprecated(false);
 
                         endpoints.add(endpoint.build()?)?;
